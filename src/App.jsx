@@ -6,7 +6,7 @@ import WebAuthnComponent from './Components/WebAuthnComponent'
 function App() {
   return (
     <div className="App">
-      Hello
+      {/* Hello */}
       <WebAuthnComponent />
     </div>
   )

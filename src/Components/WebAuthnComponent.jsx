@@ -1,8 +1,5 @@
 import React, { useState } from 'react';
 
-// const { navigator } = window;
-const publicKeyCredential = window.PublicKeyCredential;
-
 function WebAuthnComponent() {
   const [errorMessage, setErrorMessage] = useState('');
 
@@ -11,7 +8,8 @@ function WebAuthnComponent() {
       const publicKey = {
         challenge: new Uint8Array(32),
         rp: {
-          name: "My Web App"
+          name: "WebAuthn",
+          id: "localhost"
         },
         user: {
           id: new Uint8Array(32),
@@ -24,11 +22,14 @@ function WebAuthnComponent() {
         ],
         authenticatorSelection: {
           authenticatorAttachment: "platform"
-        }
+        },
+        attestation: "direct"
       };
+
       const credential = await navigator.credentials.create({
         publicKey
       });
+
       console.log('Credential:', credential);
       // Verify credential and grant access to your application
     } catch (error) {
@@ -38,14 +39,17 @@ function WebAuthnComponent() {
   }
 
   function handleClick() {
-    createCredential();
+    if (typeof window.PublicKeyCredential !== 'function') {
+      setErrorMessage('WebAuthn not supported on this browser');
+    } else {
+      createCredential();
+    }
   }
 
   return (
     <div>
       <button onClick={handleClick}>Authenticate</button>
       {errorMessage && <p>{errorMessage}</p>}
-      {!publicKeyCredential && <p>not exist</p>}
     </div>
   );
 }
