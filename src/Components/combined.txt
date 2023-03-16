@@ -1,0 +1,314 @@
+I am making a react app (using vite) to register user with their name and fingerprint authentication. Once user is registered then they can use authentication button to scan their fingerprint and directly enter to the website.
+Below are the components I implemented to achieve the functionality like demo of weauthn.io.
+
+--------
+`App.js`
+
+```
+import React, { useState } from 'react';
+import axios from 'axios';
+import RegistrationForm from './Components/RegistrationForm';
+import AuthApp from './Components/Authentication';
+import UserDisplay from './Components/UserDisplay';
+
+
+function App() {
+  const [authenticated, setAuthenticated] = useState(false);
+  const [registered, setRegistered] = useState(false)
+  const [name, setName] = useState('');
+
+
+  async function handleRegistration(data) {
+    try {
+      const response = await axios.post('/register', data);
+      setRegistered(true);
+      setName(response.data.name);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }
+
+
+  async function handleLogin() {
+    try {
+      const challenge = new Uint8Array(32);
+      window.crypto.getRandomValues(challenge);
+  
+      const publicKey = {
+        challenge,
+        allowCredentials: [
+          {
+            type: 'public-key',
+            id: new Uint8Array(16),
+            transports: ['usb', 'nfc', 'ble'],
+          },
+        ],
+        userVerification: 'required',
+      };
+  
+      const credential = await navigator.credentials.get({ publicKey });
+  
+      console.log('Credential:', credential);
+  
+      const response = await axios.post('/login', { credential });
+  
+      console.log('Server response:', response);
+  
+      setName(response.data.name);
+      setAuthenticated(true);
+    } catch (error) {
+      console.error('Error:', error);
+    }
+  }
+  
+
+
+  return (
+    <div className="App">
+      {!registered && <RegistrationForm onRegistration={handleRegistration} />}
+      {!authenticated && <AuthApp onLogin={handleLogin} />}
+      {authenticated && <UserDisplay name={name} />}
+    </div>
+  );
+}
+
+
+export default App;
+
+```
+
+
+
+------------------------
+`RegistrationForm.jsx`:
+```
+import React, { useState } from 'react';
+import axios from 'axios';
+
+function RegistrationForm() {
+  const [name, setName] = useState('');
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [registrationErrorMessage, setRegistrationErrorMessage] = useState('');
+  const [authenticatorData, setAuthenticatorData] = useState(null);
+  const [clientDataJSON, setClientDataJSON] = useState(null);
+
+  async function handleRegisterButtonClick() {
+    setIsRegistering(true);
+
+    try {
+      const publicKey = {
+        challenge: new Uint8Array(32),
+        rp: {
+          name: "WebAuthn.io Demo",
+        },
+        user: {
+          id: new Uint8Array(32),
+          name: "user@example.com",
+          displayName: "User",
+        },
+        pubKeyCredParams: [
+          { type: "public-key", alg: -7 },
+          { type: "public-key", alg: -257 },
+        ],
+        authenticatorSelection: {
+          authenticatorAttachment: "platform",
+        },
+        attestation: "direct",
+      };
+
+      const credential = await navigator.credentials.create({ publicKey });
+      console.log('Credential:', credential);
+
+      const { id, rawId, response } = credential;
+      const { clientDataJSON, authenticatorData } = response;
+
+      const data = {
+        name,
+        id: id,
+        rawId: Array.from(new Uint8Array(rawId)).join(),
+        clientDataJSON: JSON.stringify(clientDataJSON),
+        authenticatorData: Array.from(new Uint8Array(authenticatorData)).join(),
+      };
+
+      await axios.post('http://localhost:5000/register', data);
+      setName('');
+      setRegistrationErrorMessage('');
+      setAuthenticatorData(authenticatorData);
+      setClientDataJSON(clientDataJSON);
+    } catch (error) {
+      console.error('Error:', error);
+      setRegistrationErrorMessage(error.message);
+    } finally {
+      setIsRegistering(false);
+    }
+  }
+
+  return (
+    <div>
+      {authenticatorData && clientDataJSON && (
+        <p>
+          Successfully registered {name}'s fingerprint! Use the fingerprint to login from now on.
+        </p>
+      )}
+
+      {!authenticatorData && !clientDataJSON && (
+        <div>
+          <h2>Register</h2>
+          <form onSubmit={(e) => e.preventDefault()}>
+            <label>
+              Name:
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} />
+            </label>
+
+            <button
+              className="WebAuthnButton"
+              onClick={handleRegisterButtonClick}
+              disabled={isRegistering}
+            >
+              {isRegistering ? 'Registering...' : 'Register with WebAuthn'}
+            </button>
+          </form>
+
+          {registrationErrorMessage && (
+            <p className="WebAuthnError">{registrationErrorMessage}</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default RegistrationForm;
+
+```
+
+
+--------------
+`Authentication.jsx`:
+```
+import React, { useState } from 'react';
+import axios from 'axios';
+
+function Authentication({ onLogin }) {
+  const [errorMessage, setErrorMessage] = useState('');
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
+  const [userName, setUserName] = useState('');
+
+  async function handleAuthButtonClick() {
+    setIsAuthenticating(true);
+
+    try {
+      const publicKey = {
+        challenge: new Uint8Array(32),
+        allowCredentials: [
+          {
+            type: 'public-key',
+            id: new Uint8Array(16),
+            transports: ['usb', 'nfc', 'ble'],
+          },
+        ],
+        userVerification: 'required',
+      };
+
+      const credential = await navigator.credentials.get({ publicKey });
+
+      console.log('Credential:', credential);
+
+      const response = await axios.post('/login', { credential });
+
+      console.log('Server response:', response);
+
+      setUserName(response.data.name);
+      onLogin();
+    } catch (error) {
+      console.error('Error:', error);
+      setErrorMessage(error.message);
+    } finally {
+      setIsAuthenticating(false);
+    }
+  }
+
+  return (
+    <div>
+      <h2>Authenticate with WebAuthn</h2>
+      <button
+        className="WebAuthnButton"
+        onClick={handleAuthButtonClick}
+        disabled={isAuthenticating}
+      >
+        {isAuthenticating ? 'Authenticating...' : 'Authenticate with WebAuthn'}
+      </button>
+
+      {errorMessage && <p className="WebAuthnError">{errorMessage}</p>}
+    </div>
+  );
+}
+
+
+export default Authentication;
+```
+
+
+
+
+----------
+`UserDisplay.jsx`
+```
+import React from 'react';
+
+function UserDisplay(props) {
+  return (
+    <div>
+      <h2>Welcome, {props.name}!</h2>
+    </div>
+  );
+}
+
+export default UserDisplay;
+```
+
+
+
+------------
+`Server.js`:
+```
+import express from 'express';
+import cors from 'cors';
+import bodyParser from 'body-parser';
+
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const users = [];
+
+app.post("/register", (req, res) => {
+  const { name, fingerprint } = req.body;
+
+  users.push({ name, fingerprint });
+
+  res.status(200).send("User registered successfully!");
+});
+
+app.post("/login", (req, res) => {
+  const { credential } = req.body;
+
+  const user = users.find((user) => user.fingerprint === credential.id);
+
+  if (!user) {
+    res.status(401).send("Fingerprint not recognized");
+    return;
+  }
+
+  res.status(200).json({ name: user.name });
+});
+
+app.listen(5000, () => console.log("Server listening on port 5000!"));
+```
+
+
+
+
+-------
+add bootstarp to components to make UI more user friendly
