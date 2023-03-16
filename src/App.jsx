@@ -1,15 +1,13 @@
-import { useState } from 'react'
-import './App.css'
-import AuthComponent from './Components/AuthComponent'
-import WebAuthnComponent from './Components/WebAuthnComponent'
+import './App.css';
+import WebAuthnComponent from './Components/WebAuthnComponent';
 
 function App() {
   return (
     <div className="App">
-      {/* Hello */}
+      <h1>WebAuthn Demo</h1>
       <WebAuthnComponent />
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

@@ -8,26 +8,26 @@ function WebAuthnComponent() {
       const publicKey = {
         challenge: new Uint8Array(32),
         rp: {
-          name: "WebAuthn",
-          id: "localhost"
+          name: 'WebAuthn',
+          id: 'auth.me',
         },
         user: {
           id: new Uint8Array(32),
-          name: "mihir20.osl@gmail.com",
-          displayName: "Mihir"
+          name: 'mihir20.osl@gmail.com',
+          displayName: 'Mihir',
         },
         pubKeyCredParams: [
-          { type: "public-key", alg: -7 },
-          { type: "public-key", alg: -257 }
+          { type: 'public-key', alg: -7 },
+          { type: 'public-key', alg: -257 },
         ],
         authenticatorSelection: {
-          authenticatorAttachment: "platform"
+          authenticatorAttachment: 'platform',
         },
-        attestation: "direct"
+        attestation: 'direct',
       };
 
       const credential = await navigator.credentials.create({
-        publicKey
+        publicKey,
       });
 
       console.log('Credential:', credential);
@@ -47,9 +47,11 @@ function WebAuthnComponent() {
   }
 
   return (
-    <div>
-      <button onClick={handleClick}>Authenticate</button>
-      {errorMessage && <p>{errorMessage}</p>}
+    <div className="WebAuthnComponent">
+      <button className="WebAuthnButton" onClick={handleClick}>
+        Authenticate with WebAuthn
+      </button>
+      {errorMessage && <p className="WebAuthnError">{errorMessage}</p>}
     </div>
   );
 }
