@@ -9,7 +9,7 @@ function WebAuthnComponent() {
         challenge: new Uint8Array(32),
         rp: {
           name: 'WebAuthn',
-          id: 'auth.me',
+          id: 'mihir-20.github.io',
         },
         user: {
           id: new Uint8Array(32),
